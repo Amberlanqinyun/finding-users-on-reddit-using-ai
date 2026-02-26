@@ -1,0 +1,97 @@
+name: "Backlog Ticket"
+description: "Standard ticket from the MVP backlog"
+title: "[TICKET_ID] "
+labels: []
+body:
+  - type: dropdown
+    id: epic
+    attributes:
+      label: Epic
+      options:
+        - "A - Foundation & Platform"
+        - "B - Onboarding & Product Brief"
+        - "C - Source Ingestion & Normalization"
+        - "D - Keywords & Query Building"
+        - "E - Scoring & Prioritization"
+        - "F - Drafting Engine"
+        - "G - Delivery (Notion/Sheets/In-app)"
+        - "H - Workflow & Analytics"
+        - "I - Responsible Use & Abuse Controls"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "P0 - Required for MVP"
+        - "P1 - Post-MVP"
+        - "P2 - Later"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: sprint
+    attributes:
+      label: Sprint
+      options:
+        - "Sprint 0 - Foundation"
+        - "Sprint 1 - Onboarding + Brief + Ingestion"
+        - "Sprint 2 - Scoring + Drafts + Digest + Exports"
+        - "Sprint 3 - Workflow + Analytics + Collaboration"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: estimate
+    attributes:
+      label: Estimate
+      options:
+        - "S (1–2 days)"
+        - "M (3–4 days)"
+        - "L (5+ days)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: owner
+    attributes:
+      label: Owner
+      multiple: true
+      options:
+        - BE
+        - FE
+        - ML
+        - Infra
+    validations:
+      required: true
+
+  - type: textarea
+    id: user_story
+    attributes:
+      label: User Story
+      placeholder: "As a [role], I want to [goal] so that [benefit]."
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: "Bullet list of conditions that must be true for this ticket to be Done."
+      placeholder: |
+        - [ ] Condition 1
+        - [ ] Condition 2
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: dod
+    attributes:
+      label: Definition of Done
+      options:
+        - label: Feature-flagged where policy/API risk exists
+        - label: Telemetry events emitted
+        - label: Error states handled
+        - label: Unit tests for core logic
+        - label: Smoke test for workflow
+        - label: Internal README / runbook updated
