@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FindingUsers</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#FFFFFF;
+  --surface:#F7F7F5;
+  --surface2:#F0F0EC;
+  --border:#E8E8E4;
+  --border2:#EEEEED;
+  --text:#1A1A1A;
+  --text2:#6B6B6B;
+  --text3:#9B9B9B;
+  --accent:#E8611A;
+  --accent-bg:#FFF3ED;
+  --green:#0D9F58;
+  --green-bg:#ECFAF3;
+  --blue:#2D7FF9;
+  --blue-bg:#EBF3FF;
+  --purple:#7B61FF;
+  --purple-bg:#F0EEFF;
+  --yellow:#D97706;
+  --yellow-bg:#FFFBEB;
+  --red:#DC2626;
+  --red-bg:#FEF2F2;
+  --sidebar:220px;
+  --r:6px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);
+  --ease:150ms cubic-bezier(.4,0,.2,1);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","Inter",system-ui,sans-serif
+}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+#app{display:flex;height:100vh;overflow:hidden}
+
+/* ── SIDEBAR ── */
+#sidebar{width:var(--sidebar);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:14px 0 12px;flex-shrink:0;overflow-y:auto}
+.logo{padding:2px 16px 18px;display:flex;align-items:center;gap:9px;cursor:pointer}
+.logo-mark{width:27px;height:27px;background:var(--text);border-radius:6px;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:700;letter-spacing:-.5px;flex-shrink:0}
+.logo-name{font-size:13.5px;font-weight:600;color:var(--text);letter-spacing:-.2px}
+.nav-label{padding:6px 16px 3px;font-size:10.5px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.7px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:6px 16px;font-size:13px;color:var(--text2);cursor:pointer;transition:background var(--ease),color var(--ease);position:relative;user-select:none;border-left:2px solid transparent}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:rgba(232,97,26,.07);color:var(--accent);font-weight:500;border-left-color:var(--accent)}
+.nav-icon{font-size:14px;width:17px;text-align:center;flex-shrink:0;opacity:.75}
+.nav-item.active .nav-icon{opacity:1}
+.nav-pill{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px}
+.sidebar-gap{flex:1}
+.sidebar-bottom{padding:10px 12px 0;border-top:1px solid var(--border)}
+.api-row{display:flex;align-items:center;gap:6px;padding:5px 4px 8px;font-size:11.5px;color:var(--text3)}
+.api-dot{width:6px;height:6px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .3s}
+.api-dot.ok{background:var(--green)}.api-dot.err{background:var(--red)}
+.user-row{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r);cursor:pointer;transition:background var(--ease)}
+.user-row:hover{background:var(--surface2)}
+.avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#FF8C42);color:#fff;font-size:11px;font-weight:600;display:grid;place-items:center;flex-shrink:0}
+.user-name{font-size:12.5px;font-weight:500;color:var(--text)}
+.user-email{font-size:11px;color:var(--text3)}
+
+/* ── MAIN ── */
+#content{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.view{display:none;flex:1;overflow:hidden;flex-direction:column;animation:fadeUp 180ms ease-out}
+.view.active{display:flex}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── PAGE HEADER ── */
+.page-hd{padding:22px 32px 14px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.page-hd-left h1{font-size:19px;font-weight:600;color:var(--text);letter-spacing:-.3px}
+.page-hd-left p{font-size:12.5px;color:var(--text3);margin-top:2px}
+
+/* ── TOOLBAR ── */
+.toolbar{padding:10px 32px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);flex-shrink:0}
+.search-wrap{position:relative;flex:1;max-width:300px}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none;line-height:1}
+.search-inp{width:100%;padding:6px 10px 6px 30px;font-size:13px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;transition:border-color var(--ease),box-shadow var(--ease);font-family:var(--font)}
+.search-inp::placeholder{color:var(--text3)}
+.search-inp:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(232,97,26,.12)}
+.sep{width:1px;height:18px;background:var(--border);margin:0 2px;flex-shrink:0}
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{padding:4px 10px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;background:var(--bg);transition:all var(--ease);white-space:nowrap;user-select:none}
+.chip:hover{border-color:var(--text3);color:var(--text)}
+.chip.on{background:var(--text);border-color:var(--text);color:#fff;font-weight:500}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:none;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;transition:all var(--ease);font-family:var(--font);white-space:nowrap;user-select:none}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+.btn-dark{background:var(--text);color:#fff}.btn-dark:hover{background:#333}
+.btn-accent{background:var(--accent);color:#fff}.btn-accent:hover{background:#D4571A}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--surface);color:var(--text);border-color:var(--text3)}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:500;line-height:1.6;white-space:nowrap}
+.b-seek{background:var(--green-bg);color:var(--green)}
+.b-rec{background:var(--blue-bg);color:var(--blue)}
+.b-cmp{background:var(--purple-bg);color:var(--purple)}
+.b-trbl{background:var(--yellow-bg);color:var(--yellow)}
+.b-comp{background:var(--surface);color:var(--text3)}
+.b-disc{background:#E8F9F9;color:#0E7B7B}
+.b-new{background:var(--blue-bg);color:var(--blue)}
+.b-rev{background:var(--yellow-bg);color:var(--yellow)}
+.b-dra{background:var(--purple-bg);color:var(--purple)}
+.b-pos{background:var(--green-bg);color:var(--green)}
+.b-won{background:var(--green-bg);color:var(--green)}
+.b-lost{background:var(--red-bg);color:var(--red)}
+.b-reddit{background:#FFF2EE;color:#FF4500}
+
+/* ── OPP LIST ── */
+.opp-list{flex:1;overflow-y:auto}
+.opp-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 32px;color:var(--text3);text-align:center;gap:10px}
+.opp-empty-icon{font-size:32px;opacity:.3}
+.opp-row{display:flex;align-items:flex-start;gap:12px;padding:14px 32px;cursor:pointer;border-bottom:1px solid var(--border2);transition:background var(--ease)}
+.opp-row:hover{background:var(--surface)}
+.score-ring{width:38px;height:38px;flex-shrink:0;position:relative;margin-top:2px}
+.score-ring svg{transform:rotate(-90deg)}
+.score-num{position:absolute;inset:0;display:grid;place-items:center;font-size:10px;font-weight:700}
+.opp-body{flex:1;min-width:0}
+.opp-meta{display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap}
+.sub-tag{font-size:11.5px;color:var(--text3);font-weight:500}
+.opp-title{font-size:13.5px;font-weight:500;color:var(--text);line-height:1.45;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.opp-preview{font-size:12.5px;color:var(--text3);line-height:1.5;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:5px}
+.opp-foot{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text3)}
+.dot{width:2px;height:2px;background:var(--border);border-radius:50%;flex-shrink:0}
+
+/* ── DETAIL ── */
+.detail{display:none;flex-direction:column;position:absolute;inset:0;background:var(--bg);z-index:10;animation:fadeUp 180ms ease-out}
+.detail.active{display:flex}
+.detail-top{display:flex;align-items:center;gap:10px;padding:11px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.back{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text2);cursor:pointer;padding:4px 8px;border-radius:var(--r);transition:all var(--ease);user-select:none}
+.back:hover{background:var(--surface);color:var(--text)}
+.detail-top-meta{display:flex;align-items:center;gap:7px;flex:1;min-width:0}
+.detail-top-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0}
+.ext-link{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--accent);text-decoration:none;padding:4px 9px;border:1px solid rgba(232,97,26,.25);border-radius:var(--r);background:var(--accent-bg);transition:all var(--ease)}
+.ext-link:hover{background:rgba(232,97,26,.12)}
+.status-sel{padding:5px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:12.5px;color:var(--text);background:var(--bg);cursor:pointer;outline:none;font-family:var(--font)}
+.status-sel:focus{border-color:var(--accent)}
+.detail-body{display:flex;flex:1;overflow:hidden}
+.detail-l{width:50%;border-right:1px solid var(--border);overflow-y:auto;padding:26px 30px}
+.detail-r{width:50%;overflow-y:auto;padding:26px 30px;display:flex;flex-direction:column}
+.post-title{font-size:17px;font-weight:600;line-height:1.4;color:var(--text);margin-bottom:12px;letter-spacing:-.2px}
+.post-meta{display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.post-body{font-size:13.5px;line-height:1.75;color:var(--text2);background:var(--surface);padding:15px 18px;border-radius:var(--r);margin-bottom:18px;border:1px solid var(--border2)}
+.sec-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);margin-bottom:9px}
+.factors{display:flex;flex-direction:column;gap:8px}
+.factor{display:flex;align-items:center;gap:10px;font-size:12.5px}
+.factor-name{min-width:110px;color:var(--text2)}
+.factor-track{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.factor-fill{height:100%;border-radius:2px;background:var(--accent);transition:width 500ms ease-out}
+.factor-pct{font-size:11.5px;color:var(--text3);min-width:28px;text-align:right}
+
+/* ── DRAFT PANEL ── */
+.draft-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.draft-title{font-size:14.5px;font-weight:600;color:var(--text)}
+.tone-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+.tone-chip{padding:4px 10px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;transition:all var(--ease);user-select:none}
+.tone-chip:hover{border-color:var(--text3);color:var(--text)}
+.tone-chip.on{border-color:var(--accent);background:var(--accent-bg);color:var(--accent);font-weight:500}
+.var-tabs{display:flex;gap:0;margin-bottom:12px;border:1px solid var(--border);border-radius:var(--r);padding:3px;background:var(--surface)}
+.var-tab{flex:1;text-align:center;padding:5px 6px;font-size:12.5px;font-weight:500;color:var(--text3);cursor:pointer;border-radius:4px;transition:all var(--ease);user-select:none}
+.var-tab.on{background:var(--bg);color:var(--text);box-shadow:var(--shadow)}
+.warn-box{display:flex;align-items:flex-start;gap:7px;padding:9px 11px;background:var(--yellow-bg);border:1px solid #FDE68A;border-radius:var(--r);margin-bottom:10px;font-size:12.5px;color:var(--yellow);line-height:1.5}
+.draft-ta{width:100%;min-height:168px;padding:13px 15px;font-size:13.5px;line-height:1.7;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--text);resize:vertical;font-family:var(--font);outline:none;transition:border-color var(--ease),box-shadow var(--ease)}
+.draft-ta:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(232,97,26,.1)}
+.draft-foot{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.char-c{font-size:11.5px;color:var(--text3)}
+.draft-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px 20px;text-align:center;border:2px dashed var(--border);border-radius:10px;gap:12px}
+.draft-empty-icon{font-size:28px;opacity:.25}
+.draft-empty-txt{font-size:13.5px;color:var(--text3)}
+
+/* ── BRIEF ── */
+.brief-scroll{flex:1;overflow-y:auto;padding:0 32px 48px}
+.bs{padding-top:22px;margin-bottom:4px;border-top:1px solid var(--border2)}
+.bs:first-child{border-top:none;padding-top:20px}
+.bs-title{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:3px}
+.bs-desc{font-size:12.5px;color:var(--text3);margin-bottom:11px;line-height:1.5}
+.f-inp{width:100%;padding:8px 11px;font-size:13.5px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;font-family:var(--font);transition:border-color var(--ease),box-shadow var(--ease)}
+.f-inp:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(232,97,26,.1)}
+.f-inp::placeholder{color:var(--text3)}
+.f-ta{min-height:96px;resize:vertical;line-height:1.65}
+.f-ta.tall{min-height:130px}
+.two-col{display:flex;gap:16px}.two-col>*{flex:1}
+.tone-grid{display:flex;gap:7px;flex-wrap:wrap}
+.tone-btn{padding:6px 13px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;color:var(--text2);cursor:pointer;background:var(--bg);transition:all var(--ease);user-select:none}
+.tone-btn:hover{border-color:var(--text3);color:var(--text);background:var(--surface)}
+.tone-btn.on{border-color:var(--accent);background:var(--accent-bg);color:var(--accent);font-weight:500}
+.url-row{display:flex;gap:8px}
+
+/* ── KEYWORDS ── */
+.kw-scroll{flex:1;overflow-y:auto;padding:0 32px 48px}
+.kw-sec{padding-top:22px;border-top:1px solid var(--border2)}
+.kw-sec:first-child{border-top:none;padding-top:20px}
+.kw-tags{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.kw-tag{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;background:var(--surface);border:1px solid var(--border);border-radius:20px;font-size:12.5px;color:var(--text)}
+.kw-rm{cursor:pointer;color:var(--text3);font-size:15px;line-height:1;transition:color var(--ease)}.kw-rm:hover{color:var(--red)}
+.kw-inp{padding:4px 10px;font-size:12.5px;border:1px dashed var(--border);border-radius:20px;outline:none;color:var(--text);background:transparent;font-family:var(--font);width:150px;transition:border-color var(--ease)}.kw-inp:focus{border-color:var(--accent)}.kw-inp::placeholder{color:var(--text3)}
+.sug-row{display:flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:7px;transition:background var(--ease)}.sug-row:hover{background:var(--surface)}
+.sug-kw{font-size:13px;font-weight:500;color:var(--text);flex:1}
+.sug-cl{font-size:11.5px;color:var(--text3)}
+.sug-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+
+/* ── ANALYTICS ── */
+.an-scroll{flex:1;overflow-y:auto;padding:24px 32px 48px}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.stat-card{padding:18px 20px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
+.stat-val{font-size:26px;font-weight:700;letter-spacing:-1px;color:var(--text)}
+.stat-lbl{font-size:12.5px;color:var(--text3);margin-top:3px}
+.stat-chg{font-size:12px;margin-top:8px}.up{color:var(--green)}.dn{color:var(--red)}
+.prog-wrap{display:flex;flex-direction:column;gap:9px}
+.prog-row label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--text2);margin-bottom:4px}
+.prog-row label span{color:var(--text3)}
+.prog-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;border-radius:2px;transition:width 800ms ease-out}
+
+/* ── SETTINGS ── */
+.set-scroll{flex:1;overflow-y:auto;padding:24px 32px 48px}
+.set-sec{padding-top:22px;border-top:1px solid var(--border2);margin-bottom:4px}
+.set-sec:first-child{border-top:none;padding-top:0}
+.set-sec-title{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:3px}
+.set-sec-desc{font-size:12.5px;color:var(--text3);margin-bottom:14px}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border2)}
+.set-row:last-child{border-bottom:none}
+.set-lbl{font-size:13px;color:var(--text)}
+.set-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.toggle{position:relative;width:34px;height:19px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.tgl-track{position:absolute;inset:0;background:var(--border);border-radius:10px;cursor:pointer;transition:background var(--ease)}
+.toggle input:checked+.tgl-track{background:var(--accent)}
+.tgl-track::after{content:'';position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;transition:transform var(--ease);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle input:checked+.tgl-track::after{transform:translateX(15px)}
+.con-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--green-bg);color:var(--green);border-radius:4px;font-size:11.5px;font-weight:500}
+.dis-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--surface);color:var(--text3);border-radius:4px;font-size:11.5px;font-weight:500}
+
+/* ── SPINNER / LOADING ── */
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:rot .65s linear infinite;flex-shrink:0}
+.spin-dark{border-color:rgba(0,0,0,.1);border-top-color:var(--text)}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:22px;right:22px;background:var(--text);color:#fff;padding:9px 16px;border-radius:var(--r);font-size:13px;font-weight:500;opacity:0;transform:translateY(6px);transition:all 280ms cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:9999;box-shadow:var(--shadow-md)}
+#toast.show{opacity:1;transform:translateY(0)}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:860px){
+  .detail-body{flex-direction:column}
+  .detail-l,.detail-r{width:100%;border-right:none}
+  .detail-l{border-bottom:1px solid var(--border)}
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ─────────────────── SIDEBAR ─────────────────── -->
+<aside id="sidebar">
+  <div class="logo" onclick="nav('inbox')">
+    <div class="logo-mark">FU</div>
+    <div class="logo-name">FindingUsers</div>
+  </div>
+
+  <div class="nav-item active" data-v="inbox" onclick="nav('inbox')">
+    <span class="nav-icon">⬛</span>Inbox
+    <span class="nav-pill" id="inbox-pill">5</span>
+  </div>
+  <div class="nav-item" data-v="brief" onclick="nav('brief')">
+    <span class="nav-icon">✦</span>Product Brief
+  </div>
+  <div class="nav-item" data-v="keywords" onclick="nav('keywords')">
+    <span class="nav-icon">⌕</span>Keywords
+  </div>
+
+  <div class="nav-label" style="margin-top:10px">Insights</div>
+  <div class="nav-item" data-v="analytics" onclick="nav('analytics')">
+    <span class="nav-icon">◈</span>Analytics
+  </div>
+  <div class="nav-item" data-v="settings" onclick="nav('settings')">
+    <span class="nav-icon">⚙</span>Settings
+  </div>
+
+  <div class="sidebar-gap"></div>
+  <div class="sidebar-bottom">
+    <div class="api-row">
+      <div class="api-dot" id="api-dot"></div>
+      <span id="api-txt">Checking…</span>
+    </div>
+    <div class="user-row">
+      <div class="avatar">J</div>
+      <div>
+        <div class="user-name">My Workspace</div>
+        <div class="user-email">founder@startup.co</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ─────────────────── CONTENT ─────────────────── -->
+<main id="content">
+
+<!-- ══ INBOX ══ -->
+<div class="view active" id="view-inbox">
+  <div class="page-hd">
+    <div class="page-hd-left">
+      <h1>Inbox</h1>
+      <p>AI-scored leads from Reddit — sorted by conversion likelihood</p>
+    </div>
+  </div>
+  <div class="toolbar">
+    <div class="search-wrap">
+      <div class="search-icon">⌕</div>
+      <input class="search-inp" id="q" placeholder="Search keyword, subreddit…" oninput="filterList()">
+    </div>
+    <div class="sep"></div>
+    <div class="chips" id="i-chips">
+      <div class="chip on" data-f="all" onclick="setIF('all')">All</div>
+      <div class="chip" data-f="seeking_solution" onclick="setIF('seeking_solution')">Seeking solution</div>
+      <div class="chip" data-f="recommendation_req" onclick="setIF('recommendation_req')">Recommendation</div>
+      <div class="chip" data-f="comparing" onclick="setIF('comparing')">Comparing</div>
+    </div>
+    <div class="sep"></div>
+    <div class="chips" id="s-chips">
+      <div class="chip on" data-f="all" onclick="setSF('all')">All</div>
+      <div class="chip" data-f="new" onclick="setSF('new')">New</div>
+      <div class="chip" data-f="reviewed" onclick="setSF('reviewed')">Reviewed</div>
+      <div class="chip" data-f="drafted" onclick="setSF('drafted')">Drafted</div>
+    </div>
+  </div>
+  <div class="opp-list" id="opp-list"></div>
+</div>
+
+<!-- ══ BRIEF ══ -->
+<div class="view" id="view-brief">
+  <div class="page-hd">
+    <div class="page-hd-left">
+      <h1>Product Brief</h1>
+      <p>Define your ICP, value props, and voice — used to personalise every reply draft</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span class="badge b-new" id="brief-badge">Draft</span>
+      <button class="btn btn-dark" onclick="saveBrief()">Save &amp; activate</button>
+    </div>
+  </div>
+  <div class="brief-scroll">
+    <div class="bs">
+      <div class="bs-title">Extract from website</div>
+      <div class="bs-desc">Paste your URL — we'll auto-fill the fields below using AI</div>
+      <div class="url-row">
+        <input type="url" class="f-inp" id="brief-url" placeholder="https://yourproduct.com" style="flex:1">
+        <button class="btn btn-ghost" id="extract-btn" onclick="extractUrl()">Extract</button>
+      </div>
+    </div>
+    <div class="bs">
+      <div class="bs-title">Ideal customer profile</div>
+      <div class="bs-desc">Who is your buyer? Role, company size, and the context of their pain.</div>
+      <textarea class="f-inp f-ta" id="brief-icp" placeholder="e.g. Early-stage B2B SaaS founders (seed–Series A) spending 5+ hrs/week manually searching Reddit for potential customers…"></textarea>
+    </div>
+    <div class="bs">
+      <div class="two-col">
+        <div>
+          <div class="bs-title">Key pains</div>
+          <div class="bs-desc">What problems do your customers face?</div>
+          <textarea class="f-inp f-ta tall" id="brief-pains" placeholder="One per line:&#10;Can't find where customers hang out&#10;Hours wasted on irrelevant threads&#10;Doesn't know which leads are hot"></textarea>
+        </div>
+        <div>
+          <div class="bs-title">Value propositions</div>
+          <div class="bs-desc">What unique outcomes do you deliver?</div>
+          <textarea class="f-inp f-ta tall" id="brief-value" placeholder="One per line:&#10;AI scans Reddit 24/7 automatically&#10;Scores leads by conversion likelihood&#10;Human-in-loop — you control every reply"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="bs">
+      <div class="bs-title">Tone &amp; voice</div>
+      <div class="bs-desc">How should your replies feel?</div>
+      <div class="tone-grid" id="brief-tones">
+        <div class="tone-btn on" data-t="empathetic" onclick="setBriefTone('empathetic')">Empathetic</div>
+        <div class="tone-btn" data-t="casual_friendly" onclick="setBriefTone('casual_friendly')">Casual</div>
+        <div class="tone-btn" data-t="professional" onclick="setBriefTone('professional')">Professional</div>
+        <div class="tone-btn" data-t="technical" onclick="setBriefTone('technical')">Technical</div>
+        <div class="tone-btn" data-t="direct" onclick="setBriefTone('direct')">Direct</div>
+      </div>
+    </div>
+    <div class="bs">
+      <div class="two-col">
+        <div>
+          <div class="bs-title">Taboo phrases</div>
+          <div class="bs-desc">These will never appear in any draft</div>
+          <input class="f-inp" id="brief-taboo" placeholder="check it out, sign up, free trial, click here">
+        </div>
+        <div>
+          <div class="bs-title">Example replies</div>
+          <div class="bs-desc">Paste 1–3 replies to calibrate your style</div>
+          <textarea class="f-inp f-ta" id="brief-examples" placeholder="Paste replies you've written that felt authentic…"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ KEYWORDS ══ -->
+<div class="view" id="view-keywords">
+  <div class="page-hd">
+    <div class="page-hd-left">
+      <h1>Keywords</h1>
+      <p>Control which Reddit searches FindingUsers runs on your behalf</p>
+    </div>
+    <button class="btn btn-dark" id="run-btn" onclick="runSearch()">▶ Run search now</button>
+  </div>
+  <div class="kw-scroll">
+    <div class="kw-sec" style="border-top:none;padding-top:20px">
+      <div class="bs-title">Include keywords</div>
+      <div class="bs-desc">Posts must match at least one of these</div>
+      <div class="kw-tags" id="inc-tags"></div>
+      <input class="kw-inp" id="inc-inp" placeholder="+ Add keyword" onkeydown="kwKey(event,'include')">
+    </div>
+    <div class="kw-sec">
+      <div class="bs-title">Exclude keywords</div>
+      <div class="bs-desc">Posts matching these are filtered out</div>
+      <div class="kw-tags" id="exc-tags"></div>
+      <input class="kw-inp" id="exc-inp" placeholder="+ Add keyword" onkeydown="kwKey(event,'exclude')">
+    </div>
+    <div class="kw-sec">
+      <div class="bs-title">Subreddits</div>
+      <div class="bs-desc">Leave empty to search across r/all</div>
+      <div class="kw-tags" id="sub-tags"></div>
+      <input class="kw-inp" id="sub-inp" placeholder="+ r/subreddit" onkeydown="kwKey(event,'subreddit')">
+    </div>
+    <div class="kw-sec">
+      <div class="sug-hd">
+        <div>
+          <div class="bs-title">AI suggestions</div>
+          <div class="bs-desc">Based on your brief — approve to add instantly</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="genSuggestions()">Generate</button>
+      </div>
+      <div id="sug-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ANALYTICS ══ -->
+<div class="view" id="view-analytics">
+  <div class="page-hd">
+    <div class="page-hd-left">
+      <h1>Analytics</h1>
+      <p>Performance over the last 30 days</p>
+    </div>
+  </div>
+  <div class="an-scroll">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val">142</div><div class="stat-lbl">Posts scanned</div><div class="stat-chg up">↑ 23% vs last week</div></div>
+      <div class="stat-card"><div class="stat-val">31</div><div class="stat-lbl">High-intent leads</div><div class="stat-chg up">↑ 8% vs last week</div></div>
+      <div class="stat-card"><div class="stat-val">18</div><div class="stat-lbl">Drafts generated</div><div class="stat-chg up">↑ 12% vs last week</div></div>
+      <div class="stat-card"><div class="stat-val">6</div><div class="stat-lbl">Replies sent</div><div class="stat-chg dn">↓ 2 vs last week</div></div>
+    </div>
+    <div class="sec-label" style="margin-bottom:14px">Intent breakdown</div>
+    <div class="prog-wrap" style="max-width:520px;margin-bottom:32px">
+      <div class="prog-row"><label>Seeking solution <span>38%</span></label><div class="prog-track"><div class="prog-fill" style="width:38%;background:var(--green)"></div></div></div>
+      <div class="prog-row"><label>Recommendation request <span>24%</span></label><div class="prog-track"><div class="prog-fill" style="width:24%;background:var(--blue)"></div></div></div>
+      <div class="prog-row"><label>Comparing options <span>18%</span></label><div class="prog-track"><div class="prog-fill" style="width:18%;background:var(--purple)"></div></div></div>
+      <div class="prog-row"><label>Troubleshooting <span>12%</span></label><div class="prog-track"><div class="prog-fill" style="width:12%;background:var(--yellow)"></div></div></div>
+      <div class="prog-row"><label>Other <span>8%</span></label><div class="prog-track"><div class="prog-fill" style="width:8%;background:var(--text3)"></div></div></div>
+    </div>
+    <div style="height:180px;border:1px solid var(--border);border-radius:10px;background:var(--surface);display:grid;place-items:center;color:var(--text3);font-size:13px">
+      📈 Volume chart — connect live data to populate
+    </div>
+  </div>
+</div>
+
+<!-- ══ SETTINGS ══ -->
+<div class="view" id="view-settings">
+  <div class="page-hd">
+    <div class="page-hd-left">
+      <h1>Settings</h1>
+      <p>Workspace configuration and integrations</p>
+    </div>
+  </div>
+  <div class="set-scroll">
+    <div class="set-sec" style="border-top:none;padding-top:0">
+      <div class="set-sec-title">Reddit connector</div>
+      <div class="set-sec-desc">Connect your Reddit app credentials to start scanning</div>
+      <div class="set-row">
+        <div><div class="set-lbl">Client ID</div><div class="set-sub">From your Reddit app dashboard</div></div>
+        <input class="f-inp" style="width:220px" id="rc-id" placeholder="reddit_client_id">
+      </div>
+      <div class="set-row">
+        <div><div class="set-lbl">Client Secret</div></div>
+        <input type="password" class="f-inp" style="width:220px" id="rc-sec" placeholder="••••••••">
+      </div>
+      <div class="set-row">
+        <div><div class="set-lbl">Status</div></div>
+        <div class="dis-badge" id="reddit-status">Not connected</div>
+      </div>
+      <div style="margin-top:12px"><button class="btn btn-dark" onclick="connectReddit()">Connect Reddit</button></div>
+    </div>
+    <div class="set-sec">
+      <div class="set-sec-title">AI model</div>
+      <div class="set-sec-desc">Used for intent classification and draft generation</div>
+      <div class="set-row">
+        <div><div class="set-lbl">Anthropic API key</div></div>
+        <input type="password" class="f-inp" style="width:220px" id="ant-key" placeholder="sk-ant-…">
+      </div>
+      <div class="set-row">
+        <div><div class="set-lbl">Model</div></div>
+        <select class="status-sel" style="width:200px">
+          <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
+          <option value="claude-opus-4-6">Claude Opus 4.6</option>
+          <option value="claude-haiku-4-5">Claude Haiku 4.5</option>
+        </select>
+      </div>
+    </div>
+    <div class="set-sec">
+      <div class="set-sec-title">Exports</div>
+      <div class="set-sec-desc">Push opportunities to your existing tools</div>
+      <div class="set-row"><div><div class="set-lbl">Notion</div><div class="set-sub">Export leads to a Notion database</div></div><div class="dis-badge">Not connected</div></div>
+      <div class="set-row"><div><div class="set-lbl">Google Sheets</div><div class="set-sub">Export leads to a spreadsheet</div></div><div class="dis-badge">Not connected</div></div>
+    </div>
+    <div class="set-sec">
+      <div class="set-sec-title">Features</div>
+      <div class="set-sec-desc">Toggle workspace-level capabilities</div>
+      <div class="set-row">
+        <div><div class="set-lbl">X / Twitter connector</div><div class="set-sub">Monitor Twitter in addition to Reddit</div></div>
+        <label class="toggle"><input type="checkbox"><div class="tgl-track"></div></label>
+      </div>
+      <div class="set-row">
+        <div><div class="set-lbl">DM draft generation</div><div class="set-sub">Generate DM variants (requires safety review)</div></div>
+        <label class="toggle"><input type="checkbox"><div class="tgl-track"></div></label>
+      </div>
+      <div class="set-row">
+        <div><div class="set-lbl">AI keyword suggestions</div><div class="set-sub">Suggest new keywords automatically from your brief</div></div>
+        <label class="toggle"><input type="checkbox" checked><div class="tgl-track"></div></label>
+      </div>
+    </div>
+    <div style="margin-top:20px"><button class="btn btn-dark" onclick="saveSettings()">Save settings</button></div>
+  </div>
+</div>
+
+<!-- ══ DETAIL OVERLAY ══ -->
+<div class="detail" id="detail">
+  <div class="detail-top">
+    <div class="back" onclick="closeDetail()">← Back</div>
+    <div class="detail-top-meta" id="d-meta"></div>
+    <div class="detail-top-right">
+      <a id="d-link" href="#" target="_blank" class="ext-link">↗ Open on Reddit</a>
+      <select class="status-sel" id="d-status" onchange="updateStatus(this.value)">
+        <option value="new">New</option>
+        <option value="reviewed">Reviewed</option>
+        <option value="drafted">Drafted</option>
+        <option value="posted">Posted</option>
+        <option value="replied">Replied</option>
+        <option value="follow_up">Follow-up</option>
+        <option value="won">Won ✓</option>
+        <option value="lost">Lost</option>
+      </select>
+    </div>
+  </div>
+  <div class="detail-body">
+    <div class="detail-l" id="d-left"></div>
+    <div class="detail-r" id="d-right"></div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  MOCK DATA
+// ══════════════════════════════════════════════
+const OPPS = [
+  { id:'1', platform:'reddit', subreddit:'SaaS',
+    title:'How do you guys find your first 100 customers? Tried cold email but getting <1% reply rate',
+    body:"Been building my B2B SaaS for 6 months. We help small agencies automate their reporting. Cold email is killing me — 500 agencies, maybe 2–3 responses. Are there better channels? Someone mentioned Reddit but I'm not sure where to start. Any founders who've cracked this?",
+    author:'u/startup_grind_22', url:'https://reddit.com/r/SaaS/comments/example1',
+    posted_at: new Date(Date.now()-2*36e5).toISOString(),
+    intent_label:'seeking_solution', intent_confidence:0.92, opportunity_score:0.91,
+    score_factors:[{label:'Intent strength',value:0.92},{label:'ICP match',value:0.88},{label:'Recency',value:0.95}],
+    status:'new' },
+  { id:'2', platform:'reddit', subreddit:'Entrepreneur',
+    title:'What tools do you use to monitor brand mentions and find potential customers on social?',
+    body:"Running a marketing agency and I struggle knowing when potential clients are complaining about their current tools. Would love something that alerts me when someone in my niche expresses frustration. Currently manually scanning Twitter — takes forever.",
+    author:'u/agencyowner_mk', url:'https://reddit.com/r/Entrepreneur/comments/example2',
+    posted_at: new Date(Date.now()-5*36e5).toISOString(),
+    intent_label:'recommendation_req', intent_confidence:0.87, opportunity_score:0.85,
+    score_factors:[{label:'Intent strength',value:0.87},{label:'ICP match',value:0.91},{label:'Recency',value:0.78}],
+    status:'new' },
+  { id:'3', platform:'reddit', subreddit:'sales',
+    title:'Comparing Clay vs Apollo for outbound — which has better Reddit/community signal?',
+    body:"We're evaluating outbound tools. Does anyone know if Clay can monitor Reddit for intent signals? We sell to devops teams who are very active on Reddit but I can't figure out how to turn that into pipeline without scrolling for hours.",
+    author:'u/outbound_sdr', url:'https://reddit.com/r/sales/comments/example3',
+    posted_at: new Date(Date.now()-8*36e5).toISOString(),
+    intent_label:'comparing', intent_confidence:0.78, opportunity_score:0.79,
+    score_factors:[{label:'Intent strength',value:0.78},{label:'ICP match',value:0.82},{label:'Engagement',value:0.76}],
+    status:'reviewed' },
+  { id:'4', platform:'reddit', subreddit:'startups',
+    title:'Is community-led growth actually viable for early stage B2B, or is it just content marketing hype?',
+    body:"I keep reading about PLG and community-led growth but struggle to see how a 2-person team can execute it. We don't have bandwidth to be in 10 communities simultaneously. Has anyone found a way to scale community presence without a full-time community manager?",
+    author:'u/b2b_founder_vc', url:'https://reddit.com/r/startups/comments/example4',
+    posted_at: new Date(Date.now()-18*36e5).toISOString(),
+    intent_label:'seeking_solution', intent_confidence:0.71, opportunity_score:0.72,
+    score_factors:[{label:'Intent strength',value:0.71},{label:'ICP match',value:0.75},{label:'Recency',value:0.68}],
+    status:'drafted' },
+  { id:'5', platform:'reddit', subreddit:'marketing',
+    title:"Anyone successfully turned Reddit lurkers into B2B customers? What was your approach?",
+    body:"We see our ICP mention pain points our product solves daily on Reddit, but every time we engage it feels spammy or gets removed. Trying to find the line between genuinely helpful and promotional. Would love to hear from anyone who's done this authentically.",
+    author:'u/demand_gen_pm', url:'https://reddit.com/r/marketing/comments/example5',
+    posted_at: new Date(Date.now()-2*864e5).toISOString(),
+    intent_label:'recommendation_req', intent_confidence:0.83, opportunity_score:0.77,
+    score_factors:[{label:'Intent strength',value:0.83},{label:'ICP match',value:0.79},{label:'Engagement',value:0.70}],
+    status:'new' }
+];
+
+const MOCK_DRAFTS = {
+  '1':[
+    { id:'d1', variant_index:0, salesiness_score:0.08, warnings:[],
+      body:"That <1% reply rate on cold email sounds exhausting after 6 months of building — especially when you know the product works.\n\nOut of curiosity: are you reaching out to agencies who've recently complained about manual reporting somewhere? That's often the real unlock — not a better email, but a better moment.\n\nA quick experiment: search Reddit for phrases like \"tired of building client reports manually\" in r/agency or r/freelance. Reply genuinely to those threads. Reply rates are often 20–30× cold email because you're meeting them mid-pain.\n\nWhat does your current email opening line look like?" },
+    { id:'d2', variant_index:1, salesiness_score:0.04, warnings:[],
+      body:"Cold email at <1% usually means one of two things: wrong list, or wrong timing.\n\nFor agencies, the timing that works is right when they're feeling the pain — mid-quarter when reports are due, or just after losing a client to poor reporting.\n\nHave you looked at community channels yet? Your ICP tends to be very active on r/freelance, r/agency, and various Slack communities. Being genuinely helpful there before you pitch converts at a completely different rate.\n\nWhat's your current best-performing email subject line?" },
+    { id:'d3', variant_index:2, salesiness_score:0.02, warnings:[],
+      body:"Six months in and struggling with distribution — that's the classic post-build problem. The product exists, the buyers exist, but the channel hasn't clicked yet.\n\nFor agency reporting specifically, I'd look at where agencies congregate when they're frustrated. Usually Reddit threads like this one, or Slack communities like Agency Highway. Being genuinely helpful there tends to pull people to your profile, leading to inbound conversations.\n\nAre you targeting specific agency verticals, or any agency under a certain headcount?" }
+  ]
+};
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+const S = {
+  view:'inbox', iF:'all', sF:'all', q:'',
+  opp:null, vIdx:0, tone:'empathetic', briefTone:'empathetic',
+  drafts:{},
+  opps:[...OPPS],
+  kw:{ include:['find customers','reddit leads','outbound strategy','cold outreach'],
+       exclude:['job posting','hiring','internship'],
+       subreddits:['SaaS','Entrepreneur','startups','sales','marketing'] },
+  sugs:[
+    { kw:'how do I find my first customers', cluster:'how_do_i', d:null },
+    { kw:'alternatives to cold email', cluster:'alternatives', d:null },
+    { kw:'community led growth tools', cluster:'tools', d:null },
+    { kw:'b2b demand generation reddit', cluster:'intent', d:null }
+  ]
+};
+
+const API = 'http://localhost:8000';
+
+// ══════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════
+function nav(v){
+  S.view=v;
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.v===v));
+  document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active',el.id==='view-'+v));
+  document.getElementById('detail').classList.remove('active');
+}
+
+function openDetail(id){
+  const o=S.opps.find(x=>x.id===id); if(!o) return;
+  S.opp=o; S.vIdx=0;
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  renderDetail(o);
+  document.getElementById('detail').classList.add('active');
+}
+
+function closeDetail(){
+  document.getElementById('detail').classList.remove('active');
+  nav(S.view);
+}
+
+// ══════════════════════════════════════════════
+//  INBOX
+// ══════════════════════════════════════════════
+function renderInbox(){
+  let list=[...S.opps];
+  if(S.iF!=='all') list=list.filter(o=>o.intent_label===S.iF);
+  if(S.sF!=='all') list=list.filter(o=>o.status===S.sF);
+  if(S.q){ const q=S.q.toLowerCase(); list=list.filter(o=>o.title.toLowerCase().includes(q)||o.body.toLowerCase().includes(q)||o.subreddit.toLowerCase().includes(q)); }
+  list.sort((a,b)=>b.opportunity_score-a.opportunity_score);
+  document.getElementById('inbox-pill').textContent=list.length;
+  const el=document.getElementById('opp-list');
+  if(!list.length){
+    el.innerHTML='<div class="opp-empty"><div class="opp-empty-icon">◎</div><div style="font-size:13.5px">No leads match your filters</div><div style="font-size:12.5px;color:var(--text3)">Try adjusting the intent or status filter above</div></div>';
+    return;
+  }
+  el.innerHTML=list.map(o=>{
+    const sc=Math.round(o.opportunity_score*100);
+    const R=17, C=2*Math.PI*R, d=(sc/100)*C;
+    const col=sc>=80?'var(--green)':sc>=60?'var(--accent)':'var(--text3)';
+    return`<div class="opp-row" onclick="openDetail('${o.id}')">
+      <div class="score-ring">
+        <svg width="38" height="38" viewBox="0 0 38 38">
+          <circle cx="19" cy="19" r="${R}" fill="none" stroke="var(--border)" stroke-width="3"/>
+          <circle cx="19" cy="19" r="${R}" fill="none" stroke="${col}" stroke-width="3" stroke-dasharray="${d.toFixed(1)} ${(C-d).toFixed(1)}" stroke-linecap="round"/>
+        </svg>
+        <div class="score-num" style="color:${col}">${sc}</div>
+      </div>
+      <div class="opp-body">
+        <div class="opp-meta">
+          <span class="sub-tag">r/${o.subreddit}</span>
+          <span class="badge ${iBC(o.intent_label)}">${iL(o.intent_label)}</span>
+          <span class="badge ${sBC(o.status)}">${o.status}</span>
+        </div>
+        <div class="opp-title">${esc(o.title)}</div>
+        <div class="opp-preview">${esc(o.body)}</div>
+        <div class="opp-foot">
+          <span>${o.author}</span><span class="dot"></span>
+          <span>${rt(o.posted_at)}</span>
+          ${o.score_factors.slice(0,2).map(f=>`<span class="dot"></span><span>${f.label} ${Math.round(f.value*100)}%</span>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setIF(f){ S.iF=f; document.querySelectorAll('#i-chips .chip').forEach(c=>c.classList.toggle('on',c.dataset.f===f)); renderInbox(); }
+function setSF(f){ S.sF=f; document.querySelectorAll('#s-chips .chip').forEach(c=>c.classList.toggle('on',c.dataset.f===f)); renderInbox(); }
+function filterList(){ S.q=document.getElementById('q').value; renderInbox(); }
+
+// ══════════════════════════════════════════════
+//  DETAIL
+// ══════════════════════════════════════════════
+function renderDetail(o){
+  document.getElementById('d-meta').innerHTML=`
+    <span class="sub-tag" style="font-size:13px">r/${o.subreddit}</span>
+    <span class="badge ${iBC(o.intent_label)}">${iL(o.intent_label)}</span>
+    <span style="font-size:12.5px;color:var(--text3)">${Math.round(o.opportunity_score*100)}% match</span>`;
+  document.getElementById('d-link').href=o.url;
+  document.getElementById('d-status').value=o.status;
+
+  document.getElementById('d-left').innerHTML=`
+    <div class="post-meta">
+      <span class="badge b-reddit">Reddit</span>
+      <span class="sub-tag">r/${o.subreddit}</span>
+      <span class="badge ${iBC(o.intent_label)}">${iL(o.intent_label)}</span>
+    </div>
+    <div class="post-title">${esc(o.title)}</div>
+    <div class="post-body">${esc(o.body)}</div>
+    <div class="sec-label">Score factors</div>
+    <div class="factors">
+      ${o.score_factors.map(f=>`
+        <div class="factor">
+          <div class="factor-name">${f.label}</div>
+          <div class="factor-track"><div class="factor-fill" style="width:${f.value*100}%"></div></div>
+          <div class="factor-pct">${Math.round(f.value*100)}%</div>
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:16px;font-size:12px;color:var(--text3)">${o.author} · ${rt(o.posted_at)}</div>`;
+
+  renderDraftPanel(o);
+}
+
+function renderDraftPanel(o){
+  const drafts=S.drafts[o.id]||MOCK_DRAFTS[o.id]||[];
+  const tones=[{k:'empathetic',l:'Empathetic'},{k:'casual_friendly',l:'Casual'},{k:'professional',l:'Professional'},{k:'technical',l:'Technical'},{k:'direct',l:'Direct'}];
+  let h=`
+    <div class="draft-hd">
+      <div class="draft-title">Reply drafts</div>
+      <button class="btn btn-dark btn-sm" id="gen-btn" onclick="genDrafts('${o.id}')"><span id="gen-txt">Generate</span></button>
+    </div>
+    <div style="margin-bottom:7px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--text3)">Tone</div>
+    <div class="tone-row">${tones.map(t=>`<div class="tone-chip ${S.tone===t.k?'on':''}" onclick="setTone('${t.k}')">${t.l}</div>`).join('')}</div>`;
+
+  if(!drafts.length){
+    h+=`<div class="draft-empty">
+      <div class="draft-empty-icon">✦</div>
+      <div class="draft-empty-txt">Select a tone and click Generate</div>
+      <button class="btn btn-dark btn-sm" onclick="genDrafts('${o.id}')">Generate drafts</button>
+    </div>`;
+  } else {
+    const v=drafts[S.vIdx]||drafts[0];
+    h+=`
+      <div class="var-tabs">${drafts.map((_,i)=>`<div class="var-tab ${S.vIdx===i?'on':''}" onclick="selVar(${i})">Variant ${i+1}</div>`).join('')}</div>
+      ${v.salesiness_score>0.3?`<div class="warn-box"><span>⚠</span><div><strong>Salesiness detected</strong> (${Math.round(v.salesiness_score*100)}%)${v.warnings.length?`<br><span style="opacity:.8">Flagged: ${v.warnings.join(', ')}</span>`:''}</div></div>`:''}
+      <textarea class="draft-ta" id="d-ta" oninput="updCC()">${esc(v.body)}</textarea>
+      <div class="draft-foot">
+        <div class="char-c" id="d-cc">${v.body.length} chars</div>
+        <button class="btn btn-ghost btn-sm" id="copy-btn" onclick="copyDraft()">Copy</button>
+      </div>`;
+  }
+  document.getElementById('d-right').innerHTML=h;
+}
+
+function setTone(t){ S.tone=t; if(S.opp) renderDraftPanel(S.opp); }
+function selVar(i){ S.vIdx=i; if(S.opp) renderDraftPanel(S.opp); }
+function updCC(){ const t=document.getElementById('d-ta'),c=document.getElementById('d-cc'); if(t&&c) c.textContent=`${t.value.length} chars`; }
+
+async function copyDraft(){
+  const ta=document.getElementById('d-ta'); if(!ta) return;
+  try{ await navigator.clipboard.writeText(ta.value); }catch(e){}
+  const btn=document.getElementById('copy-btn');
+  if(btn){ btn.textContent='✓ Copied'; btn.style.color='var(--green)'; btn.style.borderColor='var(--green)';
+    setTimeout(()=>{ btn.textContent='Copy'; btn.style.color=''; btn.style.borderColor=''; },2000); }
+}
+
+async function genDrafts(id){
+  const btn=document.getElementById('gen-btn'), txt=document.getElementById('gen-txt');
+  if(btn) btn.disabled=true;
+  if(txt) txt.innerHTML='<span class="spin"></span>';
+  try{
+    const r=await fetch(`${API}/api/v1/opportunities/${id}/drafts`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tone:S.tone}),signal:AbortSignal.timeout(15000)});
+    if(r.ok){ const d=await r.json(); S.drafts[id]=d.variants||d; toast('Drafts generated'); if(S.opp?.id===id) renderDraftPanel(S.opp); return; }
+  }catch(e){}
+  await pause(1800);
+  S.drafts[id]=mockDrafts(S.opps.find(o=>o.id===id),S.tone);
+  toast('Drafts generated');
+  if(S.opp?.id===id) renderDraftPanel(S.opp);
+}
+
+function mockDrafts(o,tone){
+  const p={empathetic:"That frustration is real — and more common than you'd think.\n\n",casual_friendly:"Oh man, totally get this — ",professional:"This is a challenge many founders navigate at your stage. ",technical:"The root issue here is typically signal-to-noise in your ICP targeting. ",direct:"Real answer: "};
+  const intro=p[tone]||p.empathetic;
+  return[
+    {id:'m1',variant_index:0,salesiness_score:.05,warnings:[],body:`${intro}The solution often isn't a better channel, it's better timing.\n\nAre you reaching out when people are actively expressing pain — vs. working from a static list? The gap between those two scenarios can be 20–30× in reply rate.\n\nWhat does your current outreach sequence look like?`},
+    {id:'m2',variant_index:1,salesiness_score:.03,warnings:[],body:`The frustration makes sense. Most low-reply-rate situations are a list-quality or timing problem, not a copy problem.\n\nHave you mapped where your ICP hangs out when they're actively frustrated? For your use case that might be specific Reddit communities, Slack groups, or review sites.\n\nWhat types of prospects convert best when they do reply?`},
+    {id:'m3',variant_index:2,salesiness_score:.04,warnings:[],body:`Honest take: a static cold email list rarely works for this ICP. Agencies are busy and unsolicited email reads as noise.\n\nThe founders who crack this usually go where the pain is visible — Reddit threads, Slack communities, review sites — and engage there authentically first.\n\nAre you tracking which of those channels already produces even small positive signals?`}
+  ];
+}
+
+async function updateStatus(st){
+  if(!S.opp) return; S.opp.status=st;
+  try{ await fetch(`${API}/api/v1/opportunities/${S.opp.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:st}),signal:AbortSignal.timeout(5000)}); }catch(e){}
+  toast(`Status → ${st}`);
+}
+
+// ══════════════════════════════════════════════
+//  BRIEF
+// ══════════════════════════════════════════════
+function setBriefTone(t){
+  S.briefTone=t;
+  document.querySelectorAll('#brief-tones .tone-btn').forEach(el=>el.classList.toggle('on',el.dataset.t===t));
+}
+
+async function extractUrl(){
+  const url=document.getElementById('brief-url').value.trim(); if(!url) return;
+  const btn=document.getElementById('extract-btn'); btn.disabled=true; btn.textContent='Extracting…';
+  try{
+    const r=await fetch(`${API}/api/v1/briefs/extract`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url}),signal:AbortSignal.timeout(10000)});
+    if(r.ok){ const d=await r.json(); fillBrief(d); btn.disabled=false; btn.textContent='Extract'; toast('Brief extracted'); return; }
+  }catch(e){}
+  await pause(2000);
+  fillBrief({
+    icp:"Early-stage B2B SaaS founders (seed–Series A), 1–10 person teams, spending 5+ hrs/week manually searching Reddit for potential customers.",
+    pains:"Can't find where potential customers are talking\nSpends hours scrolling Reddit manually\nDoesn't know which leads are high intent\nCold email reply rates under 2%",
+    value:"AI scans Reddit 24/7 so you don't have to\nScores each lead by conversion likelihood\nGenerates authentic, non-spammy drafts\nHuman-in-loop — you approve every message"
+  });
+  btn.disabled=false; btn.textContent='Extract'; toast('Brief extracted from URL');
+}
+
+function fillBrief(d){
+  if(d.icp) document.getElementById('brief-icp').value=d.icp;
+  if(d.pains) document.getElementById('brief-pains').value=d.pains;
+  if(d.value) document.getElementById('brief-value').value=d.value;
+}
+
+async function saveBrief(){
+  const payload={ icp:document.getElementById('brief-icp').value, pains:document.getElementById('brief-pains').value.split('\n').filter(Boolean), value_props:document.getElementById('brief-value').value.split('\n').filter(Boolean), tone:S.briefTone, taboo_phrases:document.getElementById('brief-taboo').value.split(',').map(s=>s.trim()).filter(Boolean), voice_examples:document.getElementById('brief-examples').value };
+  try{
+    const r=await fetch(`${API}/api/v1/briefs`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(5000)});
+    toast(r.ok?'Brief saved & activated':'Brief saved locally');
+  }catch(e){ toast('Brief saved locally'); }
+  const b=document.getElementById('brief-badge'); b.textContent='Active'; b.className='badge b-pos';
+}
+
+// ══════════════════════════════════════════════
+//  KEYWORDS
+// ══════════════════════════════════════════════
+function renderKw(){
+  renderTags('include','inc-tags');
+  renderTags('exclude','exc-tags');
+  renderTags('subreddit','sub-tags');
+  renderSugs();
+}
+
+function renderTags(type,elId){
+  const el=document.getElementById(elId); if(!el) return;
+  const items=S.kw[type==='subreddit'?'subreddits':type];
+  el.innerHTML=items.map((kw,i)=>`<div class="kw-tag"><span>${type==='subreddit'?'r/'+kw:kw}</span><span class="kw-rm" onclick="rmKw('${type}',${i})">×</span></div>`).join('');
+}
+
+function kwKey(e,type){
+  if(e.key!=='Enter') return;
+  const v=e.target.value.trim().replace(/^r\//,''); if(!v) return;
+  const k=type==='subreddit'?'subreddits':type;
+  S.kw[k].push(v); e.target.value=''; renderTags(type,{include:'inc-tags',exclude:'exc-tags',subreddit:'sub-tags'}[type]); toast(`Added "${v}"`);
+}
+
+function rmKw(type,i){
+  const k=type==='subreddit'?'subreddits':type; S.kw[k].splice(i,1);
+  renderTags(type,{include:'inc-tags',exclude:'exc-tags',subreddit:'sub-tags'}[type]);
+}
+
+function renderSugs(){
+  const el=document.getElementById('sug-list'); if(!el) return;
+  const pending=S.sugs.filter(s=>!s.d);
+  if(!pending.length){ el.innerHTML='<div style="font-size:13px;color:var(--text3);padding:10px 0">All suggestions reviewed. Click Generate for more.</div>'; return; }
+  el.innerHTML=pending.map((s,i)=>`
+    <div class="sug-row">
+      <div><div class="sug-kw">${s.kw}</div><div class="sug-cl">${s.cluster}</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="decideSug(${i},'rejected')">Reject</button>
+      <button class="btn btn-dark btn-sm" onclick="decideSug(${i},'approved')">Add</button>
+    </div>`).join('');
+}
+
+function decideSug(i,d){
+  const pending=S.sugs.filter(s=>!s.d); const s=pending[i]; if(!s) return;
+  s.d=d;
+  if(d==='approved'){ S.kw.include.push(s.kw); renderTags('include','inc-tags'); toast(`Added "${s.kw}"`); }
+  renderSugs();
+}
+
+async function genSuggestions(){
+  toast('Generating…'); await pause(1500);
+  S.sugs.push(...[{kw:'struggling with customer acquisition',cluster:'pain',d:null},{kw:'reddit marketing b2b',cluster:'channel',d:null},{kw:'inbound lead generation saas',cluster:'intent',d:null}]);
+  renderSugs(); toast('3 new suggestions added');
+}
+
+async function runSearch(){
+  const btn=document.getElementById('run-btn'); if(btn){ btn.disabled=true; btn.textContent='Searching…'; }
+  try{ await fetch(`${API}/api/v1/keywords/run`,{method:'POST',signal:AbortSignal.timeout(5000)}); }catch(e){}
+  await pause(2200);
+  if(btn){ btn.disabled=false; btn.textContent='▶ Run search now'; }
+  toast('Search complete — check Inbox for new leads');
+}
+
+// ══════════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════════
+function connectReddit(){
+  const id=document.getElementById('rc-id').value.trim(), sec=document.getElementById('rc-sec').value.trim();
+  if(!id||!sec){ toast('Enter both Client ID and Secret'); return; }
+  toast('Connecting…');
+  setTimeout(()=>{ const el=document.getElementById('reddit-status'); el.className='con-badge'; el.textContent='● Connected'; toast('Reddit connected'); },1500);
+}
+function saveSettings(){ toast('Settings saved'); }
+
+// ══════════════════════════════════════════════
+//  API STATUS
+// ══════════════════════════════════════════════
+async function checkApi(){
+  try{
+    const r=await fetch(`${API}/health`,{signal:AbortSignal.timeout(3000)});
+    if(r.ok){ document.getElementById('api-dot').className='api-dot ok'; document.getElementById('api-txt').textContent='API connected'; return; }
+  }catch(e){}
+  document.getElementById('api-dot').className='api-dot err';
+  document.getElementById('api-txt').textContent='Mock mode';
+}
+
+// ══════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════
+const iL=l=>({seeking_solution:'Seeking solution',recommendation_req:'Wants recommendation',comparing:'Comparing',complaining:'Venting',troubleshooting:'Troubleshooting',discovery:'Exploring'}[l]||l);
+const iBC=l=>({seeking_solution:'b-seek',recommendation_req:'b-rec',comparing:'b-cmp',complaining:'b-comp',troubleshooting:'b-trbl',discovery:'b-disc'}[l]||'b-comp');
+const sBC=s=>({new:'b-new',reviewed:'b-rev',drafted:'b-dra',posted:'b-pos',won:'b-won',lost:'b-lost'}[s]||'b-new');
+
+function rt(iso){
+  const d=Date.now()-new Date(iso).getTime(), m=Math.floor(d/60000);
+  if(m<60) return`${m}m ago`; const h=Math.floor(m/60); if(h<24) return`${h}h ago`;
+  return`${Math.floor(h/24)}d ago`;
+}
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+
+let _t;
+function toast(msg,ms=2600){
+  const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
+  clearTimeout(_t); _t=setTimeout(()=>el.classList.remove('show'),ms);
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  renderInbox();
+  renderKw();
+  checkApi();
+  setInterval(checkApi,30000);
+});
+</script>
+</body>
+</html>
